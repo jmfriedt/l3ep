@@ -1,3 +1,5 @@
-Program examples for the Atmega32U4: embedded electronics bachelor course at Besancon university (France)
+Program examples for the Atmega32U4 [1] microcontroller: embedded electronics bachelor course at Besancon university (France)
 
 For Debian/GNU Linux: apt-get install gcc-avr avr-libc avrdude
+
+[1] http://ww1.microchip.com/downloads/en/devicedoc/atmel-7766-8-bit-avr-atmega16u4-32u4_datasheet.pdf
