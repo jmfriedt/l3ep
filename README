@@ -1,0 +1,3 @@
+Program examples for the Atmega32U4: embedded electronics bachelor course at Besancon university (France)
+
+For Debian/GNU Linux: apt-get install gcc-avr avr-libc avrdude
