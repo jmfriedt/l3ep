@@ -4,3 +4,6 @@ Input: 1-PPS from GPS receiver, simulated with a sigalarm from the PC running
 Output: PWM followed by a low pass filter to act as a D/A converter
 Control: microprocessor frequency
 
+Two board simulation options (to be renamed PPSControl.c): either using the 
+unix alarm signal, or the GLUT option which might extend the compatibility 
+beyond unix. Accuracy performances seem similar for both delay implementations.

@@ -1,11 +1,11 @@
-// jouer sur f.frequency pour modifier frequence du uC
+// jouer sur f.frequency pour modifier frequence du uC 
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <libgen.h>
 #include <pthread.h>
 #include <signal.h>
-#include <unistd.h>
+#include <unistd.h> // usleep
 
 #include "sim_avr.h"
 #include "avr_ioport.h"
@@ -22,8 +22,8 @@ avr_vcd_t vcd_file;
 
 volatile uint8_t display_pwm = 0;
 
-void handle_alarm(int xxx) { alarm_flag=1; alarm(1); } // 1 PPS cote' PC (board)
-void init_alarm(void) { signal(SIGALRM, handle_alarm); alarm(1);}  // signal 1 PPS
+void handle_alarm(int xxx) { alarm_flag=1; alarm(1); }            // 1 PPS cote' PC (board)
+void init_alarm(void) { signal(SIGALRM, handle_alarm); alarm(1);} // signal 1 PPS
 
 void pd2_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) {printf("PD2\n");}
 
@@ -33,7 +33,7 @@ void pwm_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param)
      { display_pwm = value; pwm_flag=1; }
 
 int main(int argc, char *argv[])
-{init_alarm();
+{
  elf_firmware_t f;
  const char * fname =  "atmega32u4_PPScontrol.axf";
  elf_read_firmware(fname, &f);
@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
   pwm_flag=0;
   icp_flag=0;
   alarm_flag=0;
+  init_alarm();
   while (1) {
 	avr_run(avr);
         if (pwm_flag==1) {f.frequency=16000000+display_pwm*10;
