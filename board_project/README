@@ -8,3 +8,10 @@ Two board simulation options (to be renamed PPSControl.c): either using the
 unix alarm signal (default), or the GLUT option which might extend the 
 compatibility beyond unix. Accuracy performances seem similar for both delay 
 implementations.
+
+Requires simavr, available at https://github.com/buserror/simavr
+1. clone simavr
+2. copy this directory in the example subdirectory of simavr
+3. install libelf-dev if not available (required dependency)
+4. in simavr: make
+will recursively compile all board examples including the content of this directory.
