@@ -1,11 +1,10 @@
-// jouer sur f.frequency pour modifier frequence du uC
+// jouer sur f.frequency pour modifier frequence du uC 
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <libgen.h>
 #include <pthread.h>
-#include <signal.h>
-#include <unistd.h>
+#include <unistd.h> // usleep
 
 #include "sim_avr.h"
 #include "avr_ioport.h"
@@ -15,15 +14,11 @@
 #include "sim_gdb.h"
 #include "sim_vcd_file.h"
 
-volatile int pwm_flag,alarm_flag,icp_flag;
-
 avr_t * avr = NULL;
-avr_vcd_t vcd_file;
+
+volatile int pwm_flag,icp_flag;
 
 volatile uint8_t display_pwm = 0;
-
-void handle_alarm(int xxx) { alarm_flag=1; alarm(1); } // 1 PPS cote' PC (board)
-void init_alarm(void) { signal(SIGALRM, handle_alarm); alarm(1);}  // signal 1 PPS
 
 void pd2_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) {printf("PD2\n");}
 
@@ -32,9 +27,38 @@ void icp_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) { ic
 void pwm_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) 
      { display_pwm = value; pwm_flag=1; }
 
+static avr_cycle_count_t PPSlo(avr_t * avr, avr_cycle_count_t when, void * param)
+{avr_irq_t** irq=(avr_irq_t**) param;
+ printf("PPS: lo\n");
+ avr_raise_irq(irq[0],1);
+ avr_raise_irq(irq[1],1);
+}
+
+static avr_cycle_count_t PPSup(avr_t * avr, avr_cycle_count_t when, void * param)
+{avr_irq_t** irq=(avr_irq_t**) param;
+ //button_press(b, 300000);       // pressed = low
+ printf("PPS: up\n");
+ avr_raise_irq(irq[0],0);
+ avr_raise_irq(irq[1],0);
+ // avr_cycle_timer_cancel(avr, PPSup, irq); // inutile cf ../../simavr/sim/sim_cycle_timers.c 
+ avr_cycle_timer_register_usec(avr, 1000000, PPSup, irq);                  // qui le fait deja
+ // avr_cycle_timer_cancel(avr, PPSlo,NULL);
+ avr_cycle_timer_register_usec(avr, 200000, PPSlo, irq);
+ return 0;
+}
+
+// button_t button;              // ajout du bouton
+// // ajout pour la definition du bouton
+// button_init(avr, &button, "button"); // initialize our 'peripheral'
+// avr_connect_irq(                     // connect the button to the port pin 
+//    button.irq + IRQ_BUTTON_OUT,
+//    avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('C'), 3));
+
 int main(int argc, char *argv[])
-{init_alarm();
+{
  elf_firmware_t f;
+ avr_irq_t* irq[2];
+ pthread_t run;
  const char * fname =  "atmega32u4_PPScontrol.axf";
  elf_read_firmware(fname, &f);
  printf("firmware %s f=%d mmcu=%s\n", fname, (int)f.frequency, f.mmcu);
@@ -43,36 +67,26 @@ int main(int argc, char *argv[])
  avr_init(avr);
  avr_load_firmware(avr, &f);
 
- avr_irq_t* pd2= avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('D'), 2);
- avr_irq_t* icp= avr_io_getirq(avr, AVR_IOCTL_TIMER_GETIRQ('3'), TIMER_IRQ_IN_ICP);
+ irq[0]= avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('D'), 2);
+ irq[1]= avr_io_getirq(avr, AVR_IOCTL_TIMER_GETIRQ('3'), TIMER_IRQ_IN_ICP);
  //avr_irq_t* icp= avr_get_interrupt_irq(avr, 32); // same effect than TIMER3+TIMER_IRQ_IN_ICP
  avr_irq_t* i_pwm= avr_io_getirq(avr, AVR_IOCTL_TIMER_GETIRQ('0'), TIMER_IRQ_OUT_PWM0);  // detecte changements de PWM
  avr_irq_register_notify(i_pwm, pwm_changed_hook, NULL);  
- avr_irq_register_notify(icp, icp_changed_hook, NULL);  
- avr_irq_register_notify(pd2, pd2_changed_hook, NULL);
+ avr_irq_register_notify(irq[1], icp_changed_hook, NULL);  
+ avr_irq_register_notify(irq[0], pd2_changed_hook, NULL);
 
- avr_vcd_init(avr, "gtkwave_output.vcd", &vcd_file, 10000 /* usec */);
- avr_vcd_add_signal(&vcd_file, avr_get_interrupt_irq(avr, 7), 1 /* bit */ ,
-		"TIMER2_COMPA" );
+// 1-PPS timer init
+ avr_cycle_timer_cancel(avr, PPSup, irq);
+ avr_cycle_timer_register_usec(avr, 1000000, PPSup, irq);
 
-//	avr_vcd_add_signal(&vcd_file, i_pwm, 8 /* bits */ ,
-//		"PWM" );
-
-  pwm_flag=0;
-  icp_flag=0;
-  alarm_flag=0;
-  while (1) {
-	avr_run(avr);
-        if (pwm_flag==1) {f.frequency=16000000+display_pwm*10;
-                          printf("PWM:%d -- freq: %d\n",display_pwm,f.frequency);pwm_flag=0;}
-        if (icp_flag==1) {printf("ICP\n");icp_flag=0;}
-        if (alarm_flag==1) 
-                   {printf("PPS:");alarm_flag=0;
-                    avr_raise_irq(pd2,0);
-                    avr_raise_irq(icp,0);
-                    usleep(100);
-                    avr_raise_irq(icp,1);
-                    avr_raise_irq(pd2,1);
-                   }
-            }
+ pwm_flag=0;
+ icp_flag=0;
+ while (1)
+ { avr_run(avr);
+   if (pwm_flag==1) {avr->frequency=16000000+display_pwm*10;
+                     printf("PWM:%d -- freq: %d\n",display_pwm,f.frequency);pwm_flag=0;}
+   if (icp_flag==1) {printf("ICP\n");icp_flag=0;}
+ }
+ return NULL;
 }
+
