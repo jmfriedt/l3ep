@@ -9,6 +9,7 @@ Requires simavr, available at https://github.com/buserror/simavr
 3. install libelf-dev if not available (required dependency)
 4. in simavr: make
 will recursively compile all board examples including the content of this directory.
+5. execute ./examples/board_project/obj-x86_64-linux-gnu/PPScontrol.elf
 
 The graphical user interface requires libdevil [1], installed on Debian GNU/Linux with
 apt-get install libdevil-dev
