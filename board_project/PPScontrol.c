@@ -1,5 +1,3 @@
-// jouer sur f.frequency pour modifier frequence du uC 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <libgen.h>
@@ -14,13 +12,93 @@
 #include "sim_gdb.h"
 #include "sim_vcd_file.h"
 
-avr_t * avr = NULL;
+#if __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#include <IL/il.h>
+#include <GL/glut.h>
+#endif
 
-volatile int pwm_flag,icp_flag;
+#define with_GUI
+
+volatile int pd2_flag,pwm_flag,icp_flag,PPS_flag; // global variables used in callbacks
+
+// GUI handling
+#ifdef with_GUI
+int *imageGL;
+
+void my_timer(int x) {glutTimerFunc(40, my_timer, 1);glutPostRedisplay();}
+
+void display(void)
+{float size=20.,sizeicp=10.;
+ glClear ( GL_COLOR_BUFFER_BIT );
+ glRasterPos2i(0,0);
+ glDrawPixels(800,600,GL_RGB, GL_UNSIGNED_INT, imageGL);
+ glPointSize(10.0);
+ if (PPS_flag)
+   {glColor3f ( 1.0f, 0.0f, 0.0f );
+    glBegin(GL_POLYGON);
+    glVertex2f(115.-size, 425.-size);
+    glVertex2f(115.-size, 425.+size);
+    glVertex2f(115.+size, 425.+size);
+    glVertex2f(115.+size, 425.-size);
+    glEnd();
+   }
+ if (icp_flag)
+   {glColor3f ( 1.0f, 1.0f, 0.0f );
+    glBegin(GL_POLYGON);
+    glVertex2f(400.-sizeicp, 400.-sizeicp);
+    glVertex2f(400.-sizeicp, 400.+sizeicp);
+    glVertex2f(400.+sizeicp, 400.+sizeicp);
+    glVertex2f(400.+sizeicp, 400.-sizeicp);
+    icp_flag=0;
+    glEnd();
+   }
+ glutSwapBuffers();
+}
+
+void myreshape(int h, int w)
+{glMatrixMode (GL_PROJECTION);
+ glLoadIdentity();
+ gluOrtho2D(0.0, (GLfloat) 800, 0.0, (GLfloat) 600);
+ glMatrixMode(GL_MODELVIEW);
+ glLoadIdentity();
+ glViewport(0,0,h,w);
+}
+
+////////////// load JPEG image: all code stolen from ... ////////////////
+// https://community.khronos.org/t/how-to-load-an-image-in-opengl/71231/6
+// libdevil-dev - Cross-platform image loading and manipulation toolkit
+ 
+#define DEFAULT_WIDTH  800
+#define DEFAULT_HEIGHT 600
+ 
+int width  = DEFAULT_WIDTH;
+int height = DEFAULT_HEIGHT;
+
+/* Load an image using DevIL and return the devIL handle (-1 if failure) */
+int LoadImage(char *filename)
+{ILuint    image; 
+ ILboolean success; 
+ ilGenImages(1, &image);    // Generation of one image name 
+ ilBindImage(image);        // Binding of image name 
+ if ( success = ilLoadImage(filename) ) // Loading image by DevIL 
+    { // Convert every colour component into unsigned byte 
+     success = ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE); 
+     if (!success) return -1;
+    }
+    else return -1;
+    return image;
+}
+#endif
+///////////////////////////////////
+
+avr_t * avr = NULL;
 
 volatile uint8_t display_pwm = 0;
 
-void pd2_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) {printf("PD2\n");}
+void pd2_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) { pd2_flag=1;}
 
 void icp_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) { icp_flag=1; }
 
@@ -30,14 +108,17 @@ void pwm_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param)
 static avr_cycle_count_t PPSlo(avr_t * avr, avr_cycle_count_t when, void * param)
 {avr_irq_t** irq=(avr_irq_t**) param;
  printf("PPS: lo\n");
+ PPS_flag=0;
  avr_raise_irq(irq[0],1);
  avr_raise_irq(irq[1],1);
+ return 0;
 }
 
 static avr_cycle_count_t PPSup(avr_t * avr, avr_cycle_count_t when, void * param)
 {avr_irq_t** irq=(avr_irq_t**) param;
  //button_press(b, 300000);       // pressed = low
  printf("PPS: up\n");
+ PPS_flag=1;
  avr_raise_irq(irq[0],0);
  avr_raise_irq(irq[1],0);
  // avr_cycle_timer_cancel(avr, PPSup, irq); // inutile cf ../../simavr/sim/sim_cycle_timers.c 
@@ -54,8 +135,28 @@ static avr_cycle_count_t PPSup(avr_t * avr, avr_cycle_count_t when, void * param
 //    button.irq + IRQ_BUTTON_OUT,
 //    avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('C'), 3));
 
+static void * avr_run_thread(void * param)
+{avr_irq_t** irq=(avr_irq_t**) param;
+ pwm_flag=0;
+ icp_flag=0;
+// 1-PPS timer init
+ avr_cycle_timer_cancel(avr, PPSup, irq);
+ avr_cycle_timer_register_usec(avr, 1000000, PPSup, irq);
+
+ while (1)
+ { avr_run(avr);
+   if (pwm_flag==1) {avr->frequency=16000000+display_pwm*10;
+                     printf("PWM:%d -- freq: %d\n",display_pwm,avr->frequency);pwm_flag=0;}
+#ifndef with_GUI
+   if (icp_flag==1) {printf("ICP\n");icp_flag=0;}
+   if (pd2_flag==1) {printf("PD2\n");pd2_flag=0;}
+#endif
+ }
+ return NULL;
+}
+
 int main(int argc, char *argv[])
-{
+{int x,y, image; // JPEG image
  elf_firmware_t f;
  avr_irq_t* irq[2];
  pthread_t run;
@@ -75,18 +176,43 @@ int main(int argc, char *argv[])
  avr_irq_register_notify(irq[1], icp_changed_hook, NULL);  
  avr_irq_register_notify(irq[0], pd2_changed_hook, NULL);
 
-// 1-PPS timer init
- avr_cycle_timer_cancel(avr, PPSup, irq);
- avr_cycle_timer_register_usec(avr, 1000000, PPSup, irq);
+ pthread_create(&run, NULL, avr_run_thread, irq);
 
- pwm_flag=0;
- icp_flag=0;
- while (1)
- { avr_run(avr);
-   if (pwm_flag==1) {avr->frequency=16000000+display_pwm*10;
-                     printf("PWM:%d -- freq: %d\n",display_pwm,avr->frequency);pwm_flag=0;}
-   if (icp_flag==1) {printf("ICP\n");icp_flag=0;}
- }
- return NULL;
+#ifdef with_GUI
+ if (ilGetInteger(IL_VERSION_NUM) < IL_VERSION) // Init DevIL 
+     { printf("wrong DevIL version "); return -1; }
+ ilInit(); 
+ image = LoadImage("picture.jpg"); // load the file picture with DevIL 
+ if ( image == -1 ) { printf("Can't load picture file"); return -1; }
+ ILubyte * bytes = ilGetData();
+ ILuint width,height;
+ width = ilGetInteger(IL_IMAGE_WIDTH);
+ height = ilGetInteger(IL_IMAGE_HEIGHT);
+ imageGL = (int*)malloc(3*sizeof(GLint)*width*height);
+ for(x = 0; x < width; x++)
+  for(y = height-1; y >= 0; y--)  // n=height
+  {imageGL[ 3*(y*width + x)+1 ] = bytes[(y*width + x)*4 + 1];
+   imageGL[ 3*(y*width + x)+2 ] = bytes[(y*width + x)*4 + 2];
+   imageGL[ 3*(y*width + x)+0 ] = bytes[(y*width + x)*4 + 0]; 
+  }
+ glutInit(&argc, argv);
+ glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+ glutInitWindowSize(width,height);
+ glutInitWindowPosition(0,0);
+ glutCreateWindow(argv[0]);       // exec name
+ glutReshapeFunc(myreshape);
+ glutDisplayFunc(display);
+ glPixelTransferf(GL_RED_SCALE, 1.);
+ glPixelTransferf(GL_GREEN_SCALE, 1.);
+ glPixelTransferf(GL_BLUE_SCALE, 1.);
+ glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+ glClearColor(1.0, 1.0, 1.0, 1.0);
+ glutTimerFunc(40, my_timer,1);
+ glutMainLoop();
+#else
+ while (1) {} // don't leave me
+#endif
+
+ //ilDeleteImages(1, &image);  // we never get there (JMF) :(
 }
 
