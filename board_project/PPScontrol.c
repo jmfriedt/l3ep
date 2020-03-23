@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
  while (1)
  { avr_run(avr);
    if (pwm_flag==1) {avr->frequency=16000000+display_pwm*10;
-                     printf("PWM:%d -- freq: %d\n",display_pwm,f.frequency);pwm_flag=0;}
+                     printf("PWM:%d -- freq: %d\n",display_pwm,avr->frequency);pwm_flag=0;}
    if (icp_flag==1) {printf("ICP\n");icp_flag=0;}
  }
  return NULL;
