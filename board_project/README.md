@@ -20,4 +20,7 @@ with
 
 [1] libdevil-dev - Cross-platform image loading and manipulation toolkit
 
+When using the graphical user interface option, the red square indicates 1-PPS has been
+triggered, and yellow square indicates input capture has occured:
+
 <img src="illustration.jpg">
