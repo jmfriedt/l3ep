@@ -1,7 +1,7 @@
-Input:   1-PPS from GPS receiver connected to Timer 3 input capture
+* Input:   1-PPS from GPS receiver connected to Timer 3 input capture
          also connected to GPIO INT2 pin
-Output:  PWM followed by a low pass filter to act as a D/A converter
-Control: microprocessor frequency
+* Output:  PWM followed by a low pass filter to act as a D/A converter
+* Control: microprocessor frequency
 
 Requires simavr, available at https://github.com/buserror/simavr
 1. clone simavr
