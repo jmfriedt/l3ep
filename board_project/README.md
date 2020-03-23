@@ -20,3 +20,4 @@ with
 
 [1] libdevil-dev - Cross-platform image loading and manipulation toolkit
 
+<img src="illustration.jpg">
