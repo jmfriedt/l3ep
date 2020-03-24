@@ -22,7 +22,7 @@
 
 #define with_GUI
 
-volatile int pd2_flag,pwm_flag,icp_flag,PPS_flag; // global variables used in callbacks
+volatile int pd2_flag,pwm_flag,icp1_flag,icp3_flag,PPS_flag; // global variables used in callbacks
 
 // GUI handling
 #ifdef with_GUI
@@ -45,14 +45,24 @@ void display(void)
     glVertex2f(115.+size, 425.-size);
     glEnd();
    }
- if (icp_flag)
+ if (icp3_flag)
    {glColor3f ( 1.0f, 1.0f, 0.0f );
     glBegin(GL_POLYGON);
     glVertex2f(400.-sizeicp, 400.-sizeicp);
     glVertex2f(400.-sizeicp, 400.+sizeicp);
     glVertex2f(400.+sizeicp, 400.+sizeicp);
     glVertex2f(400.+sizeicp, 400.-sizeicp);
-    icp_flag=0;
+    icp3_flag=0;
+    glEnd();
+   }
+ if (icp1_flag)
+   {glColor3f ( 0.0f, 1.0f, 1.0f );
+    glBegin(GL_POLYGON);
+    glVertex2f(440.-sizeicp, 400.-sizeicp);
+    glVertex2f(440.-sizeicp, 400.+sizeicp);
+    glVertex2f(440.+sizeicp, 400.+sizeicp);
+    glVertex2f(440.+sizeicp, 400.-sizeicp);
+    icp1_flag=0;
     glEnd();
    }
  glutSwapBuffers();
@@ -98,29 +108,34 @@ avr_t * avr = NULL;
 
 volatile uint8_t display_pwm = 0;
 
-void pd2_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) { pd2_flag=1;}
-
-void icp_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) { icp_flag=1; }
-
+void pd2_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param)  {pd2_flag=1; }
+void icp1_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) {icp1_flag=1;}
+void icp3_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) {icp3_flag=1;}
 void pwm_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) 
      { display_pwm = value; pwm_flag=1; }
 
 static avr_cycle_count_t PPSlo(avr_t * avr, avr_cycle_count_t when, void * param)
 {avr_irq_t** irq=(avr_irq_t**) param;
+#ifndef with_GUI
  printf("PPS: lo\n");
+#endif
  PPS_flag=0;
- avr_raise_irq(irq[0],1);
- avr_raise_irq(irq[1],1);
+ avr_raise_irq(irq[0],1); // PD2
+ avr_raise_irq(irq[1],1); // ICP3
+ avr_raise_irq(irq[2],1); // ICP1
  return 0;
 }
 
 static avr_cycle_count_t PPSup(avr_t * avr, avr_cycle_count_t when, void * param)
 {avr_irq_t** irq=(avr_irq_t**) param;
  //button_press(b, 300000);       // pressed = low
+#ifndef with_GUI
  printf("PPS: up\n");
+#endif
  PPS_flag=1;
- avr_raise_irq(irq[0],0);
- avr_raise_irq(irq[1],0);
+ avr_raise_irq(irq[0],0); // PD2
+ avr_raise_irq(irq[1],0); // ICP3
+ avr_raise_irq(irq[2],0); // ICP1
  // avr_cycle_timer_cancel(avr, PPSup, irq); // inutile cf ../../simavr/sim/sim_cycle_timers.c 
  avr_cycle_timer_register_usec(avr, 1000000, PPSup, irq);                  // qui le fait deja
  // avr_cycle_timer_cancel(avr, PPSlo,NULL);
@@ -138,7 +153,8 @@ static avr_cycle_count_t PPSup(avr_t * avr, avr_cycle_count_t when, void * param
 static void * avr_run_thread(void * param)
 {avr_irq_t** irq=(avr_irq_t**) param;
  pwm_flag=0;
- icp_flag=0;
+ icp1_flag=0;
+ icp3_flag=0;
 // 1-PPS timer init
  avr_cycle_timer_cancel(avr, PPSup, irq);
  avr_cycle_timer_register_usec(avr, 1000000, PPSup, irq);
@@ -146,9 +162,10 @@ static void * avr_run_thread(void * param)
  while (1)
  { avr_run(avr);
    if (pwm_flag==1) {avr->frequency=16000000+display_pwm*10;
-                     printf("PWM:%d -- freq: %d\n",display_pwm,avr->frequency);pwm_flag=0;}
+                     printf("PWM:%d freq: %d\n",display_pwm,avr->frequency);pwm_flag=0;}
 #ifndef with_GUI
-   if (icp_flag==1) {printf("ICP\n");icp_flag=0;}
+   if (icp1_flag==1) {printf("ICP1\n");icp1_flag=0;}
+   if (icp3_flag==1) {printf("ICP3\n");icp3_flag=0;}
    if (pd2_flag==1) {printf("PD2\n");pd2_flag=0;}
 #endif
  }
@@ -158,7 +175,7 @@ static void * avr_run_thread(void * param)
 int main(int argc, char *argv[])
 {int x,y, image; // JPEG image
  elf_firmware_t f;
- avr_irq_t* irq[2];
+ avr_irq_t* irq[3];
  pthread_t run;
  const char * fname =  "atmega32u4_PPScontrol.axf";
  elf_read_firmware(fname, &f);
@@ -169,11 +186,13 @@ int main(int argc, char *argv[])
  avr_load_firmware(avr, &f);
 
  irq[0]= avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('D'), 2);
- irq[1]= avr_io_getirq(avr, AVR_IOCTL_TIMER_GETIRQ('3'), TIMER_IRQ_IN_ICP);
- //avr_irq_t* icp= avr_get_interrupt_irq(avr, 32); // same effect than TIMER3+TIMER_IRQ_IN_ICP
+ irq[1]= avr_io_getirq(avr, AVR_IOCTL_TIMER_GETIRQ('3'), TIMER_IRQ_IN_ICP); // ICP3
+ irq[2]= avr_io_getirq(avr, AVR_IOCTL_TIMER_GETIRQ('1'), TIMER_IRQ_IN_ICP); // ICP1
+// avr_irq_t* icp= avr_get_interrupt_irq(avr, 32); // same effect than TIMER3+TIMER_IRQ_IN_ICP
  avr_irq_t* i_pwm= avr_io_getirq(avr, AVR_IOCTL_TIMER_GETIRQ('0'), TIMER_IRQ_OUT_PWM0);  // detecte changements de PWM
  avr_irq_register_notify(i_pwm, pwm_changed_hook, NULL);  
- avr_irq_register_notify(irq[1], icp_changed_hook, NULL);  
+ avr_irq_register_notify(irq[1], icp3_changed_hook, NULL);  
+ avr_irq_register_notify(irq[2], icp1_changed_hook, NULL);  
  avr_irq_register_notify(irq[0], pd2_changed_hook, NULL);
 
  pthread_create(&run, NULL, avr_run_thread, irq);
