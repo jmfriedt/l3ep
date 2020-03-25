@@ -110,7 +110,8 @@ volatile uint8_t display_pwm = 0;
 
 void pd2_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param)  {pd2_flag=1; }
 void icp1_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) {icp1_flag=1;}
-void icp3_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) {icp3_flag=1;}
+void icp3_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) 
+     { icp3_flag=1; if (PPS_flag==1) printf("freq: %d\n",avr->frequency);}
 void pwm_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param) 
      { display_pwm = value; pwm_flag=1; }
 
@@ -162,7 +163,7 @@ static void * avr_run_thread(void * param)
  while (1)
  { avr_run(avr);
    if (pwm_flag==1) {avr->frequency=16000000+display_pwm*10;
-                     printf("PWM:%d freq: %d\n",display_pwm,avr->frequency);pwm_flag=0;}
+                     printf("PWM:%d\n",display_pwm);pwm_flag=0;}
 #ifndef with_GUI
    if (icp1_flag==1) {printf("ICP1\n");icp1_flag=0;}
    if (icp3_flag==1) {printf("ICP3\n");icp3_flag=0;}
