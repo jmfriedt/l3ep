@@ -5,7 +5,7 @@
 
 Requires ``simavr``, available at https://github.com/buserror/simavr
 1. clone simavr
-2. to make visualization of the GPIO status easier, add to `avr_ioport_write()`` in 
+2. to make visualization of the GPIO status easier, add to ``avr_ioport_write()`` in 
 ``simavr/sim/avr\_ioport.c`` the following display function
 
 ```
