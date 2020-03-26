@@ -29,7 +29,7 @@ IPATH += ${simavr}/simavr/sim
 VPATH = .
 VPATH += ../parts
 
-LDFLAGS += -lpthread
+LDFLAGS += -lpthread -lglut -lGL -lGLU -lIL
 
 include ../Makefile.opengl
 
@@ -40,7 +40,6 @@ include ${simavr}/Makefile.common
 board = ${OBJ}/${target}.elf
 
 ${board} : ${OBJ}/button.o
-${board} : ${OBJ}/hc595.o
 ${board} : ${OBJ}/${target}.o
 
 ${target}: ${board}
