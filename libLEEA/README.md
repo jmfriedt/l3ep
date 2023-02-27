@@ -1,5 +1,10 @@
 ## libLEEA
 
+Compile from the ``src`` directory to generate the library
+stored in ``lib``
+
+## Function description
+
 The I2C communication library includes
 * ``void I2C_UEXT(uint8_t on);``: PB4 high to power the supply voltage
 * ``void I2C_init(uint8_t bitrate, uint8_t prescaler);``: initialize I2C communication clock (bitrate=0x18 for 400 kHz)
