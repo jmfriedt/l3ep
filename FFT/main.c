@@ -16,7 +16,10 @@ void usb_write(short c)
 void getSamplesFromADC(short *x_n_re)
 {int i;
  for (i=0;i<N;i++)
-    x_n_re[i]=(short)(127*sin((float)(i)/4.));
+//    x_n_re[i]=(short)(127*sin((float)(i)/4.));
+   {if ((i%20)<10) x_n_re[i]=127; else x_n_re[i]=-127;
+    if (x_n_re[i]&0x0080) x_n_re[i]|=0xFF00; 
+   }
 }
 
 void main()
@@ -33,3 +36,5 @@ void main()
       }
 //   while (1) {}
 }
+
+

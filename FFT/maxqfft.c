@@ -76,7 +76,7 @@
 
 short MB;
 
-#define MUL_1(A,B,C) MB=B;C=(A*B)>>7
+#define MUL_1(A,B,C) MB=B;C=((long)A*(long)B)>>7
 #define MUL_2(A,C)   C=(A*MB)>>7
 #define MUL_INIT(B)  MB=B
 #define MUL_NC(A,C)  C=A*MB
