@@ -10,7 +10,13 @@
 #define LM75 0x90
 
 void affiche(unsigned char *b,unsigned char *t)
-{ [... fournir la fonction qui affiche la temperature lue sur le LM75 ...]
+{b[0]=t[0]>>4;  b[0]+='0';if (b[0]>'9') b[0]+='A'-'9'-1;
+ b[1]=t[0]&0x0f;b[1]+='0';if (b[1]>'9') b[1]+='A'-'9'-1;
+ b[2]=t[1]>>4  ;b[2]+='0';if (b[2]>'9') b[2]+='A'-'9'-1;
+ b[3]=t[1]&0x0f;b[3]+='0';if (b[3]>'9') b[3]+='A'-'9'-1;
+ b[4]='\r';
+ b[5]='\n';
+ b[6]=0;
 }
 
 int main(void){
