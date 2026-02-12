@@ -21,7 +21,7 @@ void affiche(unsigned char *b,unsigned char *t)
 
 int main(void){
   uint8_t temperature[3];   
-  uint8_t buffer[19]="Bonjour";
+  uint8_t buffer[29]="Bonjour";
   init_olimexIno();               //Initialisation de la carte
   sei();
   USB_init();                     // attente de connexion avec minicom
