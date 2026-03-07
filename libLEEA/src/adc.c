@@ -6,8 +6,10 @@ void adc_init(uint8_t ref)
  ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
 }
 
-unsigned short adc_read(uint8_t ch)
-{ch &= 0x1F;                // ch\in[0..31]
+unsigned short adc_read(uint8_t ch) // ch\in[0..63]
+{if (ch>31) ADCSRB |= (1<<MUX5);
+ else ADCSRB &= ~(1<<MUX5);
+ ch &= 0x1F;                // ch\in[0..31]
  ADMUX=(ADMUX & 0xE0)|ch;   // clears the bottom 5 bits before ORing
  ADCSRA |= (1<<ADSC);       // start single convertion
  while(ADCSRA & (1<<ADSC)); // poll jusqu'a fin de conversion

@@ -18,4 +18,4 @@ The I2C communication library includes
 ADC initialization functions:
 * ``void adc_init(uint8_t)``: called once for initializing the ADC speed and setting the reference voltage with a mask [REFS1,REFS0] provided as argument (0 for AREF, 1 for Vcc, 3 for internal
 2.56V reference).
-* ``unsigned short adc_read(uint8_t)``: called for reading a new measurement on a channel given as argument (0..31).
+* ``unsigned short adc_read(uint8_t)``: called for reading a new measurement on a channel given as argument (0..63).
