@@ -7,12 +7,12 @@
 TARGET=lm75
 
 CPU=atmega32u4
-CFLAGS=-mmcu=$(CPU) -Os -Wall -I../libLEEA/include -I../../../../platforms/Atmega32/VirtualSerial/ -I../../../../platforms/Atmega32/lufa-LUFA-140928 -DF_USB=16000000UL -DF_CPU=16000000UL -Os -std=gnu99 
+CFLAGS=-mmcu=$(CPU) -Os -Wall -I../libLEEA/include -I../LUFA_light/VirtualSerial_example/ -I../LUFA_light/lufa-LUFA-140928 -DF_USB=16000000UL -DF_CPU=16000000UL -Os -std=gnu99 
 
 all:	$(TARGET).out
 
 $(TARGET).out: $(TARGET).o
-	avr-gcc $(CFLAGS) -L../../lib -L../../../../platforms/Atmega32/VirtualSerial -o $(TARGET).out $(TARGET).o -lLEEA -lVirtualSerial 
+	avr-gcc $(CFLAGS) -L../../lib -L../LUFA_light/VirtualSerial_lib/ -o $(TARGET).out $(TARGET).o -lLEEA -lVirtualSerial 
 	avr-objdump -dSt $(TARGET).out > $(TARGET).lst
 	avr-objcopy -O ihex $(TARGET).out $(TARGET).hex
 
