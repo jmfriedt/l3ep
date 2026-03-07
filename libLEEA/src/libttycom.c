@@ -25,7 +25,7 @@ void init_olimexIno(){
 void USB_init(void){
  //  USBDevice;
   USBDevice_attach();
- // Ouverture de la communication USB et attente de connection
+ // Ouverture de la communication USB et attente de connexion
   while (! Serial_test()) {
   }; // wait for serial port to connect. 
 }

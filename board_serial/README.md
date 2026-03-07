@@ -1,4 +1,4 @@
-Serial port interrupt demonstration.
+## Serial port interrupt demonstration.
 
 Uncomment PORT B toggling to generate VCD trace with serial port data and interrupt events.
 

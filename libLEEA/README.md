@@ -14,3 +14,7 @@ The I2C communication library includes
 ``address`` slave
 * ``int8_t I2C_rw(const uint8_t address, uint8_t *dataOut, uint8_t nOut, uint8_t *dataIn, uint8_t nIn);``: write
 ``nOut`` bytes and read ``nIn`` bytes to/from ``address``.
+
+ADC initialization functions:
+* ``void adc_init()``: called once for initializing the ADC speed and reference voltage
+* ``unsigned short adc_read(uint8_t)``: called for reading a new measurement on a channe given as argument

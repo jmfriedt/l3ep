@@ -7,7 +7,7 @@
 TARGET=lm75
 
 CPU=atmega32u4
-CFLAGS=-mmcu=$(CPU) -Os -Wall -I../../include -I../../../../platforms/Atmega32/VirtualSerial/ -I../../../../platforms/Atmega32/lufa-LUFA-140928 -DF_USB=16000000UL -DF_CPU=16000000UL -Os -std=gnu99 
+CFLAGS=-mmcu=$(CPU) -Os -Wall -I../libLEEA/include -I../../../../platforms/Atmega32/VirtualSerial/ -I../../../../platforms/Atmega32/lufa-LUFA-140928 -DF_USB=16000000UL -DF_CPU=16000000UL -Os -std=gnu99 
 
 all:	$(TARGET).out
 
