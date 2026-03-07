@@ -23,7 +23,7 @@ void I2C_UEXT(uint8_t on){
 void I2C_init(uint8_t bitrate, uint8_t prescaler)
      //Séléction de la fréquence 
 {
-  PRR0&=~1<<PRTWI;
+  PRR0&=~(1<<PRTWI);
   // activate internal pullups for twi.
   /* digitalWrite(SDA, 1); */
   /* digitalWrite(SCL, 1); */
