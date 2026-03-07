@@ -1,5 +1,5 @@
 CC=avr-gcc
-CFLAGS=-mmcu=atmega32u4 -Os -Wall -I../../../../platforms/Atmega32/VirtualSerial/ -I../../../../platforms/Atmega32/lufa-LUFA-140928 -DF_USB=16000000UL -DF_CPU=16000000UL -std=gnu99
+CFLAGS=-mmcu=atmega32u4 -Os -Wall -I../LUFA_light/VirtualSerial_example/ -I../LUFA_light/lufa-LUFA-140928 -DF_USB=16000000UL -DF_CPU=16000000UL -std=gnu99
 # EXEC=timer_ovf
 # EXEC=blink
 # EXEC=usart_string
